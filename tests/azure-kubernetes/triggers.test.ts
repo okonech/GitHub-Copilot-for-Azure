@@ -32,6 +32,8 @@ describe(`${SKILL_NAME} - Trigger Tests`, () => {
       "Set up Azure Kubernetes monitoring with Prometheus",
       "Configure Azure AKS deployment safeguards",
       "Azure Kubernetes cluster upgrade strategy",
+      "Troubleshoot my AKS cluster because pods are stuck pending",
+      "My AKS node is NotReady and I need kubectl troubleshooting help",
     ];
 
     test.each(shouldTriggerPrompts)('triggers on: "%s"', (prompt) => {

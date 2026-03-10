@@ -28,6 +28,25 @@ describe(`${SKILL_NAME} - Unit Tests`, () => {
       const description = skill.metadata.description.toLowerCase();
       expect(description).toMatch(/aks|kubernetes/);
     });
+
+    test("description preserves planning-focused AKS guidance", () => {
+      const description = skill.metadata.description.toLowerCase();
+      expect(description).toMatch(/plan and create production-ready/);
+      expect(description).toMatch(/day-0/);
+    });
+  });
+
+  describe("Routing Guidance", () => {
+    test("routes active problems to troubleshooting subskill", () => {
+      expect(skill.content).toContain("## Routing");
+      expect(skill.content).toContain("troubleshooting/SKILL.md");
+    });
+
+    test("prefers AKS MCP for AKS-aware operations", () => {
+      const content = skill.content.toLowerCase();
+      expect(content).toMatch(/aks mcp server|aks mcp/);
+      expect(content).toMatch(/applens|inspektor gadget/);
+    });
   });
 
   describe("Day-0 vs Day-1 Guidance", () => {

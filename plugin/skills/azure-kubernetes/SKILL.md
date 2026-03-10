@@ -3,7 +3,7 @@ name: azure-kubernetes
 license: MIT
 metadata:
   author: Microsoft
-  version: "1.0.0"
+  version: "1.0.1"
 description: "Plan and create production-ready Azure Kubernetes Service (AKS) clusters. Covers Day-0 decisions and Day-1 configuration, cluster SKUs (Automatic vs Standard), security, monitoring, reliability/performance best practices, upgrades, and networking. WHEN: create AKS cluster, plan AKS configuration, design AKS networking, AKS Automatic vs Standard, AKS security, AKS upgrade strategy, AKS autoscaling, AKS monitoring setup, AKS cost analysis, Day-0 checklist."
 ---
 
@@ -11,15 +11,15 @@ description: "Plan and create production-ready Azure Kubernetes Service (AKS) cl
 
 > **AUTHORITATIVE GUIDANCE — MANDATORY COMPLIANCE**
 >
-> This skill produces a **recommended AKS cluster configuration** based on user requirements, distinguishing **Day-0 decisions** (networking, API server — hard to change later) from **Day-1 features** (can enable post-creation). See [CLI reference](./references/cli-reference.md) for commands.
+> This parent skill is the **AKS entry point**. Route active AKS issues to [AKS Troubleshooting](./troubleshooting/SKILL.md). Keep this file focused on **planning and production-ready cluster configuration**, distinguishing **Day-0 decisions** (networking, API server — hard to change later) from **Day-1 features** (can enable post-creation). See [CLI reference](./references/cli-reference.md) for commands.
 
 ## Quick Reference
 | Property | Value |
 |----------|-------|
-| Best for | AKS cluster planning and Day-0 decisions |
+| Best for | AKS entry-point routing plus cluster planning and Day-0 decisions |
 | MCP Tools | `mcp_azure_mcp_aks`, `mcp_aks_mcp_az_aks_operations` |
 | CLI | `az aks create`, `az aks show` |
-| Related skills | azure-diagnostics (troubleshooting), azure-deploy (app deployment) |
+| Related skills | [AKS Troubleshooting](./troubleshooting/SKILL.md), azure-diagnostics, azure-deploy |
 
 ## When to Use This Skill
 Activate this skill when user wants to:
@@ -33,12 +33,38 @@ Activate this skill when user wants to:
 - Enable AKS cost visibility and analysis
 - Understand AKS Automatic vs Standard SKU differences
 - Get a Day-0 checklist for AKS cluster setup and configuration
+- Route an AKS troubleshooting question to the correct subskill
+
+## Routing
+
+Use this parent skill as the AKS entry point and route by user intent:
+
+- **Planning / Day-0 / Day-1**: cluster creation, networking design, security posture, observability setup, upgrades, and cost or reliability decisions
+- **Troubleshooting / Day-2**: existing cluster issues, pod failures, node health problems, ingress or networking breaks, autoscaling failures, image pull issues, or requests for diagnostic kubectl guidance
+
+If the user is diagnosing an active AKS problem, use [AKS Troubleshooting](./troubleshooting/SKILL.md).
+If the user is designing or provisioning AKS, stay in this parent skill.
+
+## Sub-Skills
+
+| Sub-skill | When to route |
+|-----------|---------------|
+| [AKS Troubleshooting](./troubleshooting/SKILL.md) | Day-2 AKS diagnosis and remediation guidance |
 
 ## Rules
 1. Start with the user's requirements for provisioning compute, networking, security, and other settings.
-2. Use the AKS MCP server for invoking Azure API and kubectl commands when applicable during the cluster setup and operations processes.
+2. Use the AKS MCP server for AKS Azure API access and kubectl operations when applicable during setup and operations.
 3. Determine if AKS Automatic or Standard SKU is more appropriate based on the user's need for control vs convenience. Default to AKS Automatic unless specific customizations are required.
 4. Document decisions and rationale for cluster configuration choices, especially for Day-0 decisions that are hard to change later (networking, API server access).
+
+## MCP Tools
+
+| Tool | Use |
+|------|-----|
+| `mcp_azure_mcp_aks` | Primary AKS MCP server for cluster facts, Azure resource inspection, and AKS-aware operations |
+| `mcp_aks_mcp_az_aks_operations` | AKS MCP Azure operations for cluster and node pool management flows |
+
+When a request requires AKS-aware Azure inspection, kubectl commands, AppLens detectors, or Inspektor Gadget, prefer the AKS MCP server over direct shell commands.
 
 
 ## Required Inputs (Ask only what’s needed)

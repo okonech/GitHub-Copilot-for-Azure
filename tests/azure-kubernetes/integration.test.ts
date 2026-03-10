@@ -267,5 +267,23 @@ describeIntegration(`${SKILL_NAME}_ - Integration Tests`, () => {
         }
       }
     });
+
+    test("invokes azure-kubernetes skill for AKS troubleshooting prompt", async () => {
+      for (let i = 0; i < RUNS_PER_PROMPT; i++) {
+        try {
+          const agentMetadata = await agent.run({
+            prompt: "Troubleshoot my AKS cluster. Pods are in CrashLoopBackOff and I want AKS MCP based kubectl diagnostics."
+          });
+
+          softCheckSkill(agentMetadata, SKILL_NAME);
+        } catch (e: unknown) {
+          if (e instanceof Error && e.message?.includes("Failed to load @github/copilot-sdk")) {
+            console.log("⏭️  SDK not loadable, skipping test");
+            return;
+          }
+          throw e;
+        }
+      }
+    });
   });
 });
