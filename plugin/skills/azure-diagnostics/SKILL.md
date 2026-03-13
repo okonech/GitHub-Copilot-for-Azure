@@ -1,10 +1,10 @@
 ---
 name: azure-diagnostics
-description: "Debug and troubleshoot production issues on Azure. Covers Container Apps and Function Apps diagnostics, log analysis with KQL, health checks, and common issue resolution for image pulls, cold starts, health probes, and function invocation failures. USE FOR: debug production issues, troubleshoot container apps, troubleshoot function apps, troubleshoot Azure Functions, analyze logs with KQL, fix image pull failures, resolve cold start issues, investigate health probe failures, check resource health, view application logs, find root cause of errors, function app not working, function invocation failures DO NOT USE FOR: deploying applications (use azure-deploy), creating new resources (use azure-prepare), setting up monitoring (use azure-observability), cost optimization (use azure-cost-optimization)"
+description: "Debug and troubleshoot production issues on Azure. Covers Container Apps, Function Apps, and Azure Kubernetes Service diagnostics, log analysis with KQL, health checks, and common issue resolution for image pulls, cold starts, health probes, pod failures, node issues, and networking problems. USE FOR: debug production issues, troubleshoot container apps, troubleshoot function apps, troubleshoot Azure Functions, troubleshoot AKS, troubleshoot kubernetes, analyze logs with KQL, fix image pull failures, resolve cold start issues, investigate health probe failures, check resource health, view application logs, find root cause of errors, function app not working, function invocation failures, pod crashing, node not ready, kubernetes networking DO NOT USE FOR: deploying applications (use azure-deploy), creating new resources (use azure-prepare), setting up monitoring (use azure-observability), cost optimization (use azure-cost-optimization)"
 license: MIT
 metadata:
   author: Microsoft
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # Azure Diagnostics
@@ -24,6 +24,8 @@ Activate this skill when user wants to:
 - Find root cause of application errors
 - Troubleshoot Azure Function Apps (invocation failures, timeouts, binding errors)
 - Find the App Insights or Log Analytics workspace linked to a Function App
+- Troubleshoot AKS clusters (pod failures, node issues, networking, image pull errors)
+- Diagnose Kubernetes workload issues using kubectl and AKS MCP
 
 ## Rules
 
@@ -51,6 +53,15 @@ Activate this skill when user wants to:
 |---------|---------------|-----------|
 | **Container Apps** | Image pull failures, cold starts, health probes, port mismatches | [container-apps/](references/container-apps/README.md) |
 | **Function Apps** | App details, invocation failures, timeouts, binding errors, cold starts, missing app settings | [functions/](references/functions/README.md) |
+| **Azure Kubernetes** | Pod failures, node issues, networking problems | [azure-kubernetes/](references/azure-kubernetes/README.md) |
+
+---
+
+## Sub-Skills
+
+| Sub-skill | When to route |
+|-----------|---------------|
+| [AKS Troubleshooting](./troubleshooting/SKILL.md) | Day-2 AKS diagnosis: pod failures, node health, networking, upgrades, kubectl-based investigation |
 
 ---
 
@@ -134,3 +145,4 @@ az monitor activity-log list -g RG --max-events 20
 - [KQL Query Library](references/kql-queries.md)
 - [Azure Resource Graph Queries](references/azure-resource-graph.md)
 - [Function Apps Troubleshooting](references/functions/README.md)
+- [Azure Kubernetes Troubleshooting](references/azure-kubernetes/README.md)
