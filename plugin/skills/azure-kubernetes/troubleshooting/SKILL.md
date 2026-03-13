@@ -4,19 +4,19 @@ description: "Troubleshoot Azure Kubernetes Service (AKS) clusters using structu
 license: MIT
 metadata:
   author: Microsoft
-  version: "1.0.2"
+  version: "1.0.0"
 ---
 
 # AKS Troubleshooting
 
 ## Quick Reference
 
-| Property             | Value                                                                                                                                                                                    |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Best for             | Day-2 diagnosis of AKS cluster, node, workload, networking, and upgrade issues                                                                                                           |
-| MCP Tools            | Azure/aks-mcp integrations such as `mcp_azure_mcp_aks`, `mcp_aks_mcp_az_aks_operations`, plus `mcp_azure_mcp_monitor`, `mcp_azure_mcp_resourcehealth`, and `mcp_azure_mcp_documentation` |
-| AKS MCP capabilities | Azure/aks-mcp exposes AKS-aware Azure APIs, kubectl mediation, detectors, fleet/network/compute views, and advanced troubleshooting such as Inspektor Gadget when enabled                |
-| Detailed guidance    | [references/troubleshooting-overview.md](references/troubleshooting-overview.md), [references/aks-mcp.md](references/aks-mcp.md)                                                         |
+| Property             | Value                                                                                                                                        |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Best for             | Day-2 diagnosis of AKS cluster, node, workload, networking, and upgrade issues                                                               |
+| MCP Tools            | `mcp_azure_mcp_aks`, `mcp_aks_mcp_az_aks_operations`, `mcp_azure_mcp_monitor`, `mcp_azure_mcp_resourcehealth`, `mcp_azure_mcp_documentation` |
+| AKS MCP capabilities | AKS-aware Azure APIs, kubectl mediation, AppLens detectors, and advanced troubleshooting such as Inspektor Gadget when available             |
+| Detailed guidance    | [references/troubleshooting-overview.md](references/troubleshooting-overview.md)                                                             |
 
 ## When to Use This Skill
 
@@ -33,16 +33,15 @@ metadata:
 
 ## MCP Tools
 
-| Tool                            | Command or Role | Use                                                                                                                                              |
-| ------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `Azure/aks-mcp`                 | External server | Preferred AKS-aware MCP server. Depending on the client, this may surface as unified `call_az` / `call_kubectl` tools or mapped legacy AKS tools |
-| `mcp_azure_mcp_aks`             | AKS MCP server  | Primary repo/client-mapped entry point for AKS-aware Azure inspection, kubectl mediation, and advanced diagnostics                               |
-| `mcp_aks_mcp_az_aks_operations` | AKS operations  | Cluster and node pool operations exposed through AKS MCP                                                                                         |
-| `mcp_azure_mcp_monitor`         | `logs_query`    | Query Azure Monitor logs and metrics when cluster telemetry is involved                                                                          |
-| `mcp_azure_mcp_resourcehealth`  | `get`           | Check health state of the AKS resource and supporting Azure resources                                                                            |
-| `mcp_azure_mcp_documentation`   | Doc search      | Pull Microsoft Learn guidance for the exact failure mode                                                                                         |
+| Tool                            | Command or Role | Use                                                                                      |
+| ------------------------------- | --------------- | ---------------------------------------------------------------------------------------- |
+| `mcp_azure_mcp_aks`             | AKS MCP server  | Primary path for AKS-aware Azure inspection, kubectl mediation, and advanced diagnostics |
+| `mcp_aks_mcp_az_aks_operations` | AKS operations  | Cluster and node pool operations exposed through AKS MCP                                 |
+| `mcp_azure_mcp_monitor`         | `logs_query`    | Query Azure Monitor logs and metrics when cluster telemetry is involved                  |
+| `mcp_azure_mcp_resourcehealth`  | `get`           | Check health state of the AKS resource and supporting Azure resources                    |
+| `mcp_azure_mcp_documentation`   | Doc search      | Pull Microsoft Learn guidance for the exact failure mode                                 |
 
-When kubectl commands, AppLens detectors, Inspektor Gadget, fleet, or AKS-aware Azure inspection are needed, prefer Azure/aks-mcp rather than direct terminal commands. In this repo's client integrations, those capabilities may appear under mapped names such as `mcp_azure_mcp_aks`, `mcp_aks_mcp_az_aks_operations`, kubectl tools, detector tools, or Inspektor Gadget. See [references/aks-mcp.md](references/aks-mcp.md) for installation and configuration guidance.
+When kubectl commands, AppLens detectors, or Inspektor Gadget are needed, prefer AKS MCP rather than direct terminal commands. Only fall back to CLI examples when the user needs manual steps or AKS MCP is unavailable.
 
 ## Workflow
 
@@ -75,7 +74,6 @@ When kubectl commands, AppLens detectors, Inspektor Gadget, fleet, or AKS-aware 
 | Error or blocker                                | Likely cause                                                         | Remediation                                                                                                      |
 | ----------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | No AKS cluster context                          | Cluster name, resource group, or subscription is missing             | Ask for the minimum cluster identifier needed to continue                                                        |
-| AKS MCP server is unavailable                   | Azure/aks-mcp is not installed, started, or exposed by the client    | Install or start Azure/aks-mcp, then retry with MCP tools before falling back to manual CLI guidance             |
 | AKS MCP cannot access the cluster               | Azure auth, RBAC, namespace restrictions, or MCP configuration issue | Confirm AKS MCP authentication and permissions, then fall back to manual commands only if needed                 |
 | kubectl diagnostics require elevated access     | Server is running readonly or restricted namespaces only             | Tell the user which AKS MCP access level or namespace scope is blocking the step                                 |
 | Logs or metrics are missing                     | Monitoring not enabled or wrong workspace queried                    | Confirm monitoring setup and shift to Kubernetes events and resource state                                       |

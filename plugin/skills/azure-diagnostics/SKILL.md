@@ -16,6 +16,7 @@ metadata:
 ## Triggers
 
 Activate this skill when user wants to:
+
 - Debug or troubleshoot production issues
 - Diagnose errors in Azure services
 - Analyze application logs or metrics
@@ -49,18 +50,18 @@ Activate this skill when user wants to:
 
 ## Troubleshooting Guides by Service
 
-| Service | Common Issues | Reference |
-|---------|---------------|-----------|
-| **Container Apps** | Image pull failures, cold starts, health probes, port mismatches | [container-apps/](references/container-apps/README.md) |
-| **Function Apps** | App details, invocation failures, timeouts, binding errors, cold starts, missing app settings | [functions/](references/functions/README.md) |
-| **Azure Kubernetes** | Pod failures, node issues, networking problems | [azure-kubernetes/](references/azure-kubernetes/README.md) |
+| Service              | Common Issues                                                                                 | Reference                                                  |
+| -------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **Container Apps**   | Image pull failures, cold starts, health probes, port mismatches                              | [container-apps/](references/container-apps/README.md)     |
+| **Function Apps**    | App details, invocation failures, timeouts, binding errors, cold starts, missing app settings | [functions/](references/functions/README.md)               |
+| **Azure Kubernetes** | Pod failures, node issues, networking problems                                                | [azure-kubernetes/](references/azure-kubernetes/README.md) |
 
 ---
 
 ## Sub-Skills
 
-| Sub-skill | When to route |
-|-----------|---------------|
+| Sub-skill                                         | When to route                                                                                     |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | [AKS Troubleshooting](./troubleshooting/SKILL.md) | Day-2 AKS diagnosis: pod failures, node health, networking, upgrades, kubectl-based investigation |
 
 ---
@@ -87,6 +88,7 @@ az monitor app-insights query --apps APP-INSIGHTS -g RG \
 ### AppLens (MCP Tools)
 
 For AI-powered diagnostics, use:
+
 ```
 mcp_azure_mcp_applens
   intent: "diagnose issues with <resource-name>"
@@ -103,6 +105,7 @@ Provides:
 ### Azure Monitor (MCP Tools)
 
 For querying logs and metrics:
+
 ```
 mcp_azure_mcp_monitor
   intent: "query logs for <resource-name>"
