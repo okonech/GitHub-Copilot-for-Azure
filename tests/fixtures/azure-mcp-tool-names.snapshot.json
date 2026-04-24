@@ -1,6 +1,6 @@
 {
   "source": "npx -y @azure/mcp server start (initialize + tools/list)",
-  "azureMcpVersion": "3.0.0-beta.3+ae9594a1268710e678c0a6c9f9801212b1ee3694",
+  "azureMcpVersion": "3.0.0-beta.5+4637b2434cd6e8dcf285de245a71074bb00664db",
   "toolNames": [
     "acr",
     "advisor",
@@ -10,6 +10,7 @@
     "applicationinsights",
     "appservice",
     "azd",
+    "azurebackup",
     "azuremigrate",
     "azureterraformbestpractices",
     "bicepschema",
