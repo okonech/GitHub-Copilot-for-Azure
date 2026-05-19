@@ -1,3 +1,52 @@
+something’s wrong my aks app won’t stay up
+my aks pod in crash-loop-bad-cmd keeps restarting after container start
+aks pods are crashlooping how can I see the command that’s failing?
+getting aks CrashLoopBackOff errors could it be a bad command?
+how do I inspect the container command used in my aks deployment?
+my aks app keeps crashing right after it starts
+the aks pod keeps restarting immediately after deployment
+how do I figure out why my aks pod is failing on start
+aks CrashLoopBackOff errors showing up could it be my command
+can I see which command my aks container is running
+aks pod keeps restarting after deployment what command is it running
+aks pod starts but immediately fails any way to check why
+aks application keeps crashing could it be the container command
+the aks app restarts over and over I didn’t change anything
+my aks pod in bad-liveness keeps restarting randomly
+seeing aks probe failures in bad-liveness, how do I debug?
+aks pod keeps restarting due to failed probe, how can I confirm?
+what causes aks liveness probes to fail even when app runs fine?
+it says something about missing files in aks what’s going on?
+my aks pod in missing-configmap won’t start says ConfigMap not found
+getting errors about missing config in aks missing-configmap, how to fix?
+aks pods in missing-configmap are crashing at startup, could it be config?
+how can I check if my aks deployment references a non-existent ConfigMap?
+my aks pods never start, they just stay Pending
+aks pods in unschedulable namespace are stuck in Pending
+nothing is scheduling in aks unschedulable, what’s wrong?
+aks pods in unschedulable are waiting for resources, how to fix this?
+how do I see why my pods can’t be scheduled on any node in aks?
+Diagnose HPA not scaling pods in my AKS cluster.
+Why is the cluster autoscaler in AKS cluster not adding nodes?
+Investigate performance degradation in my AKS cluster workloads.
+Help me tune resource requests for better scaling in AKS cluster.
+Help me troubleshoot AKS cluster upgrade failure.
+Diagnose node upgrade rollback in AKS cluster.
+Why did my AKS cluster workload break after upgrade?
+Investigate kubelet version mismatch in AKS cluster.
+Help me fix API deprecation warnings in AKS cluster.
+my aks deployment rollout is stuck after updating the container image
+the new aks pods never become ready after rollout in rollout-stuck-demo
+why does my aks rollout keep hanging even though pods are running?
+aks deployment rollout won’t progress, readiness probe failing
+kubectl rollout status in aks shows pending, how do I debug probes?
+aks pods in ns-net-sim can’t resolve external domains
+network seems fine but curl google.com fails in aks ns-net-sim
+aks DNS resolution not working in this namespace
+aks pods can ping IPs but not domain names
+how can I check if my aks NetworkPolicy blocks DNS egress?
+service A can’t reach service B inside aks ns-svc-block
+requests from aks pod-a to pod-b time out
 AKS service connectivity in same namespace is broken
 kubectl exec curl service-b in AKS returns connection refused
 is my AKS NetworkPolicy blocking traffic between services?
