@@ -1,0 +1,51 @@
+AKS service connectivity in same namespace is broken
+kubectl exec curl service-b in AKS returns connection refused
+is my AKS NetworkPolicy blocking traffic between services?
+AKS pods stuck in ImagePullBackOff, how to fix?
+seeing AKS image pull errors after deploy, could registry credentials be wrong?
+AKS pods in ns-image-pull can't pull images, what to check?
+how do I debug AKS image pull errors?
+AKS deployment not progressing because images won't download
+AKS ingress traffic not routing, getting 502s from nginx
+AKS pods are healthy but ingress returns SSL errors
+AKS ingress has expired certificate, how to rotate?
+AKS https requests fail but http works, certificate expiry?
+how do I check if my AKS TLS secret is still valid?
+my AKS pod keeps crashing any ideas
+why does my AKS pod in oom-lab restart constantly
+AKS CrashLoopBackOff in oom-lab how do I check OOMKills or memory
+my AKS workloads are stuck pending
+AKS pods in node-sim won't schedule not sure why
+AKS pods in node-sim pending, autoscaling not working, how debug node scaling
+my AKS pod won't start in azure-store
+AKS image pull errors in azure-store what could cause that
+AKS ErrImagePull in azure-store image URL might be wrong how verify it
+AKS pods in acr-demo won't start
+why am I getting ImagePullBackOff in AKS acr-demo
+AKS ImagePullBackOff in acr-demo might be ACR auth, how check and fix
+help me diagnose AKS memory issues
+investigate high cpu usage in AKS workloads
+why is an AKS pod consuming excessive memory
+troubleshoot memory leak in my AKS deployment
+identify cpu throttling in my AKS nodes
+diagnose OOM errors in AKS containers
+what's causing memory pressure in AKS
+investigate node cpu saturation in AKS
+why are AKS pods being evicted due to memory
+analyze AKS resource limits vs usage
+can I see which command my AKS container is running AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+AKS pod starts but immediately fails any way to check why AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+AKS app keeps crashing, could it be the container command AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+AKS pod keeps restarting after deployment what command is it running AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+my AKS pod keeps restarting liveness probe might be failing how to check AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+AKS liveness probe keeps killing container what should I look for AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+AKS deployment errors say config missing how can I fix this AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+how do I confirm my AKS ConfigMap is mounted in the pod AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+AKS pods not scheduling cluster might be out of resources how to confirm AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+AKS pending pods forever can I adjust requests to get them running AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+AKS cluster not adding nodes even with load what logs to check AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+AKS HPA does not scale pods could it be resource limits AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+after AKS cluster upgrade some nodes are unhealthy, how to resolve
+AKS upgrade failed need guidance to fix version compatibility issues AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_3
+AKS pod crashes after consuming memory how to debug OOM
+oom-lab AKS pod keeps restarting how to check memory limits AKS cluster id is /subscriptions/443b0799-279f-401e-a220-aa1463a7710f/resourceGroups/aks_troubleshooting_demo/providers/Microsoft.ContainerService/managedClusters/agent_demo_1

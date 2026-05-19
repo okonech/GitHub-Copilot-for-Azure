@@ -1,0 +1,301 @@
+## Cluster: alexok-aks-diagnostics-3
+## Type: Kubernetes service
+## Location: Sweden Central
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c3-api-on-8080
+  namespace: default
+  labels:
+    app: c3-api-on-8080
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-service-port
+    scenario: service-target-port-mismatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c3-api-on-8080
+  template:
+    metadata:
+      labels:
+        app: c3-api-on-8080
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c3-service-port
+        scenario: service-target-port-mismatch
+    spec:
+      containers:
+        - name: app
+          image: python:3.12-alpine
+          command:
+            - python
+            - -m
+            - http.server
+            - "8080"
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: c3-api
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-service-port
+    scenario: service-target-port-mismatch
+spec:
+  selector:
+    app: c3-api-on-8080
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c3-dns-client
+  namespace: default
+  labels:
+    app: c3-dns-client
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-dns-override
+    scenario: pod-dnsconfig-override
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c3-dns-client
+  template:
+    metadata:
+      labels:
+        app: c3-dns-client
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c3-dns-override
+        scenario: pod-dnsconfig-override
+    spec:
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          - 203.0.113.10
+        searches:
+          - svc.cluster.local
+      containers:
+        - name: client
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - sleep 3600
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c3-worker-no-cpu-request
+  namespace: default
+  labels:
+    app: c3-worker-no-cpu-request
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-hpa-metrics
+    scenario: hpa-missing-cpu-request
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c3-worker-no-cpu-request
+  template:
+    metadata:
+      labels:
+        app: c3-worker-no-cpu-request
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c3-hpa-metrics
+        scenario: hpa-missing-cpu-request
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - "while true; do :; done"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: c3-worker-no-cpu-request
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-hpa-metrics
+    scenario: hpa-missing-cpu-request
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: c3-worker-no-cpu-request
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: c3-app-secret
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-secret-key
+    scenario: missing-secret-key
+type: Opaque
+data:
+  wrong-token-key: ZHVtbXk=
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c3-secret-key-missing
+  namespace: default
+  labels:
+    app: c3-secret-key-missing
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-secret-key
+    scenario: missing-secret-key
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c3-secret-key-missing
+  template:
+    metadata:
+      labels:
+        app: c3-secret-key-missing
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c3-secret-key
+        scenario: missing-secret-key
+    spec:
+      containers:
+        - name: app
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - sleep 3600
+          env:
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: c3-app-secret
+                  key: token
+                  optional: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c3-too-large-to-schedule
+  namespace: default
+  labels:
+    app: c3-too-large-to-schedule
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-high-requests
+    scenario: excessive-resource-requests
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c3-too-large-to-schedule
+  template:
+    metadata:
+      labels:
+        app: c3-too-large-to-schedule
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c3-high-requests
+        scenario: excessive-resource-requests
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27-alpine
+          resources:
+            requests:
+              cpu: "200"
+              memory: 800Gi
+            limits:
+              cpu: "200"
+              memory: 800Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c3-slow-start
+  namespace: default
+  labels:
+    app: c3-slow-start
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-init-wait
+    scenario: init-container-waits-on-missing-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c3-slow-start
+  template:
+    metadata:
+      labels:
+        app: c3-slow-start
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c3-init-wait
+        scenario: init-container-waits-on-missing-service
+    spec:
+      initContainers:
+        - name: wait-for-dependency
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - until nslookup missing-backend.default.svc.cluster.local; do echo waiting for missing-backend; sleep 5; done
+      containers:
+        - name: web
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c3-service-account-api
+  namespace: default
+  labels:
+    app: c3-service-account-api
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-service-account
+    scenario: missing-service-account
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c3-service-account-api
+  template:
+    metadata:
+      labels:
+        app: c3-service-account-api
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c3-service-account
+        scenario: missing-service-account
+    spec:
+      serviceAccountName: c3-missing-service-account
+      containers:
+        - name: web
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80

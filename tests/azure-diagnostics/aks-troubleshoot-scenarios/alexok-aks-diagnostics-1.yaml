@@ -1,0 +1,280 @@
+## Cluster: alexok-aks-diagnostics-1
+## Type: Kubernetes service
+## Location: Sweden Central
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c1-liveness-wrong-path
+  namespace: default
+  labels:
+    app: c1-liveness-wrong-path
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c1-liveness-probe
+    scenario: liveness-probe-wrong-path
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c1-liveness-wrong-path
+  template:
+    metadata:
+      labels:
+        app: c1-liveness-wrong-path
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c1-liveness-probe
+        scenario: liveness-probe-wrong-path
+    spec:
+      containers:
+        - name: web
+          image: "nginx:1.27-alpine"
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 1
+            failureThreshold: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c1-bad-image-tag
+  namespace: default
+  labels:
+    app: c1-bad-image-tag
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c1-image-pull
+    scenario: image-pull-wrong-tag
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c1-bad-image-tag
+  template:
+    metadata:
+      labels:
+        app: c1-bad-image-tag
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c1-image-pull
+        scenario: image-pull-wrong-tag
+    spec:
+      containers:
+        - name: web
+          image: "mcr.microsoft.com/oss/nginx/nginx:aks-diagnostics-missing-tag"
+          imagePullPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c1-node-selector-missing
+  namespace: default
+  labels:
+    app: c1-node-selector-missing
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c1-unschedulable-selector
+    scenario: impossible-node-selector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c1-node-selector-missing
+  template:
+    metadata:
+      labels:
+        app: c1-node-selector-missing
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c1-unschedulable-selector
+        scenario: impossible-node-selector
+    spec:
+      nodeSelector:
+        diagnostics.azure.com/nodepool: missing-pool
+      containers:
+        - name: pause
+          image: "registry.k8s.io/pause:3.10"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c1-catalog-api
+  namespace: default
+  labels:
+    app: catalog-api
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c1-service-selector
+    scenario: service-selector-mismatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog-api
+  template:
+    metadata:
+      labels:
+        app: catalog-api
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c1-service-selector
+        scenario: service-selector-mismatch
+    spec:
+      containers:
+        - name: web
+          image: "nginx:1.27-alpine"
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: c1-catalog-api
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c1-service-selector
+    scenario: service-selector-mismatch
+spec:
+  selector:
+    app: catalog-api-typo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c1-missing-env
+  namespace: default
+  labels:
+    app: c1-missing-env
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c1-crash-missing-env
+    scenario: missing-required-env
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c1-missing-env
+  template:
+    metadata:
+      labels:
+        app: c1-missing-env
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c1-crash-missing-env
+        scenario: missing-required-env
+    spec:
+      containers:
+        - name: app
+          image: "busybox:1.36"
+          command:
+            - /bin/sh
+            - "-c"
+          args:
+            - 'test -n "$APP_MODE" || { echo APP_MODE is required; exit 1; }; sleep 3600'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c1-frontend
+  namespace: default
+  labels:
+    app: c1-frontend
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c1-frontend-503
+    scenario: service-empty-endpoints-from-readiness
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c1-frontend
+  template:
+    metadata:
+      labels:
+        app: c1-frontend
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c1-frontend-503
+        scenario: service-empty-endpoints-from-readiness
+    spec:
+      containers:
+        - name: web
+          image: "nginx:1.27-alpine"
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 1
+            failureThreshold: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: c1-frontend
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c1-frontend-503
+    scenario: service-empty-endpoints-from-readiness
+spec:
+  selector:
+    app: c1-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: c1-orders-config
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c1-config-key
+    scenario: configmap-key-mismatch
+data:
+  ORDERS_ENDPOINT: "http://orders.default.svc.cluster.local"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c1-orders-api
+  namespace: default
+  labels:
+    app: c1-orders-api
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c1-config-key
+    scenario: configmap-key-mismatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c1-orders-api
+  template:
+    metadata:
+      labels:
+        app: c1-orders-api
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c1-config-key
+        scenario: configmap-key-mismatch
+    spec:
+      containers:
+        - name: app
+          image: "busybox:1.36"
+          command:
+            - /bin/sh
+            - "-c"
+          args:
+            - sleep 3600
+          env:
+            - name: ORDER_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: c1-orders-config
+                  key: ORDER_ENDPOINT
+                  optional: false

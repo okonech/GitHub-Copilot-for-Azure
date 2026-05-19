@@ -1,0 +1,380 @@
+## Cluster: alexok-aks-diagnostics-2
+## Type: Kubernetes service
+## Location: Sweden Central
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c2-readiness-wrong-port
+  namespace: default
+  labels:
+    app: c2-readiness-wrong-port
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-readiness-port
+    scenario: readiness-probe-wrong-port
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c2-readiness-wrong-port
+  template:
+    metadata:
+      labels:
+        app: c2-readiness-wrong-port
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c2-readiness-port
+        scenario: readiness-probe-wrong-port
+    spec:
+      containers:
+        - name: web
+          image: "nginx:1.27-alpine"
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 1
+            failureThreshold: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: c2-readiness-wrong-port
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-readiness-port
+    scenario: readiness-probe-wrong-port
+spec:
+  selector:
+    app: c2-readiness-wrong-port
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c2-memory-hog
+  namespace: default
+  labels:
+    app: c2-memory-hog
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-oom
+    scenario: oomkilled-memory-limit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c2-memory-hog
+  template:
+    metadata:
+      labels:
+        app: c2-memory-hog
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c2-oom
+        scenario: oomkilled-memory-limit
+    spec:
+      containers:
+        - name: app
+          image: "python:3.12-alpine"
+          command:
+            - python
+            - "-c"
+          args:
+            - import time; data = bytearray(128 * 1024 * 1024); time.sleep(3600)
+          resources:
+            requests:
+              memory: 16Mi
+              cpu: 25m
+            limits:
+              memory: 32Mi
+              cpu: 250m
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c2-internal-api
+  namespace: default
+  labels:
+    app: internal-api
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-network-policy
+    scenario: default-deny-egress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: internal-api
+  template:
+    metadata:
+      labels:
+        app: internal-api
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c2-network-policy
+        scenario: default-deny-egress
+    spec:
+      containers:
+        - name: web
+          image: "nginx:1.27-alpine"
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: c2-internal-api
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-network-policy
+    scenario: default-deny-egress
+spec:
+  selector:
+    app: internal-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c2-net-client
+  namespace: default
+  labels:
+    app: net-client
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-network-policy
+    scenario: default-deny-egress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: net-client
+  template:
+    metadata:
+      labels:
+        app: net-client
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c2-network-policy
+        scenario: default-deny-egress
+    spec:
+      containers:
+        - name: client
+          image: "busybox:1.36"
+          command:
+            - /bin/sh
+            - "-c"
+          args:
+            - sleep 3600
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: c2-deny-client-egress
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-network-policy
+    scenario: default-deny-egress
+spec:
+  podSelector:
+    matchLabels:
+      app: net-client
+  policyTypes:
+    - Egress
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c2-lb-backend
+  namespace: default
+  labels:
+    app: c2-lb-backend
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-load-balancer
+    scenario: load-balancer-invalid-subnet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c2-lb-backend
+  template:
+    metadata:
+      labels:
+        app: c2-lb-backend
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c2-load-balancer
+        scenario: load-balancer-invalid-subnet
+    spec:
+      containers:
+        - name: web
+          image: "nginx:1.27-alpine"
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: c2-internal-lb
+  namespace: default
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    service.beta.kubernetes.io/azure-load-balancer-internal-subnet: missing-diagnostics-subnet
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-load-balancer
+    scenario: load-balancer-invalid-subnet
+spec:
+  type: LoadBalancer
+  selector:
+    app: c2-lb-backend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: c2-missing-storageclass
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-pvc-pending
+    scenario: missing-storage-class
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: missing-diagnostics-sc
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: c2-pvc-consumer
+  namespace: default
+  labels:
+    app: c2-pvc-consumer
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-pvc-pending
+    scenario: missing-storage-class
+spec:
+  containers:
+    - name: app
+      image: "busybox:1.36"
+      command:
+        - /bin/sh
+        - "-c"
+      args:
+        - sleep 3600
+      volumeMounts:
+        - name: data
+          mountPath: /data
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: c2-missing-storageclass
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c2-dns-client
+  namespace: default
+  labels:
+    app: c2-dns-client
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-dns-policy
+    scenario: network-policy-blocks-dns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c2-dns-client
+  template:
+    metadata:
+      labels:
+        app: c2-dns-client
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c2-dns-policy
+        scenario: network-policy-blocks-dns
+    spec:
+      containers:
+        - name: client
+          image: "busybox:1.36"
+          command:
+            - /bin/sh
+            - "-c"
+          args:
+            - sleep 3600
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: c2-allow-http-only
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-dns-policy
+    scenario: network-policy-blocks-dns
+spec:
+  podSelector:
+    matchLabels:
+      app: c2-dns-client
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c2-critical-api
+  namespace: default
+  labels:
+    app: c2-critical-api
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-pdb-upgrade
+    scenario: pdb-blocks-node-drain
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c2-critical-api
+  template:
+    metadata:
+      labels:
+        app: c2-critical-api
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c2-pdb-upgrade
+        scenario: pdb-blocks-node-drain
+    spec:
+      containers:
+        - name: web
+          image: "nginx:1.27-alpine"
+          ports:
+            - containerPort: 80
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: c2-critical-api
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c2-pdb-upgrade
+    scenario: pdb-blocks-node-drain
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: c2-critical-api
