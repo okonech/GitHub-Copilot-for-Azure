@@ -91,6 +91,22 @@ spec:
           args:
             - sleep 3600
 ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: c3-dns-client-deny-egress
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-dns-override
+    scenario: pod-dnsconfig-override
+spec:
+  podSelector:
+    matchLabels:
+      app: c3-dns-client
+  policyTypes:
+    - Egress
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -122,6 +138,10 @@ spec:
             - -c
           args:
             - "while true; do :; done"
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -198,6 +218,12 @@ spec:
                   name: c3-app-secret
                   key: token
                   optional: false
+            - name: SECONDARY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: c3-missing-secret
+                  key: token
+                  optional: false
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -222,6 +248,8 @@ spec:
         diagnostics-scenario-namespace: c3-high-requests
         scenario: excessive-resource-requests
     spec:
+      nodeSelector:
+        diagnostics.azure.com/sku: memory-optimized-oversized
       containers:
         - name: web
           image: nginx:1.27-alpine
@@ -232,6 +260,52 @@ spec:
             limits:
               cpu: "200"
               memory: 800Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c3-missing-backend
+  namespace: default
+  labels:
+    app: c3-missing-backend
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-init-wait
+    scenario: init-container-waits-on-missing-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c3-missing-backend
+  template:
+    metadata:
+      labels:
+        app: c3-missing-backend
+        azure-diagnostics-test: "true"
+        diagnostics-scenario-namespace: c3-init-wait
+        scenario: init-container-waits-on-missing-service
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: missing-backend
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-init-wait
+    scenario: init-container-waits-on-missing-service
+spec:
+  selector:
+    app: c3-missing-backend-typo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -263,12 +337,59 @@ spec:
             - /bin/sh
             - -c
           args:
-            - until nslookup missing-backend.default.svc.cluster.local; do echo waiting for missing-backend; sleep 5; done
+            - until wget -q -T 2 -O - http://missing-backend.default.svc.cluster.local/healthz; do echo waiting for missing-backend endpoints; sleep 5; done
       containers:
         - name: web
           image: nginx:1.27-alpine
           ports:
             - containerPort: 80
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: c3-api-runner
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-service-account
+    scenario: missing-service-account
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: c3-service-account-api-pod-writer
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-service-account
+    scenario: missing-service-account
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - create
+      - get
+      - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: c3-service-account-api-pod-writer
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c3-service-account
+    scenario: missing-service-account
+subjects:
+  - kind: ServiceAccount
+    name: c3-api-runner
+    namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: c3-service-account-api-pod-writer
 ---
 apiVersion: apps/v1
 kind: Deployment

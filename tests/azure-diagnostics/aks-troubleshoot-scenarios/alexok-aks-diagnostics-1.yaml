@@ -39,6 +39,23 @@ spec:
             timeoutSeconds: 1
             failureThreshold: 1
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: c1-liveness-wrong-path
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c1-liveness-probe
+    scenario: liveness-probe-wrong-path
+spec:
+  selector:
+    app: c1-liveness-wrong-path
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -62,6 +79,8 @@ spec:
         diagnostics-scenario-namespace: c1-image-pull
         scenario: image-pull-wrong-tag
     spec:
+      imagePullSecrets:
+        - name: c1-acr-pull-secret
       containers:
         - name: web
           image: "mcr.microsoft.com/oss/nginx/nginx:aks-diagnostics-missing-tag"
@@ -92,6 +111,15 @@ spec:
     spec:
       nodeSelector:
         diagnostics.azure.com/nodepool: missing-pool
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                      - swedencentral-9
       containers:
         - name: pause
           image: "registry.k8s.io/pause:3.10"
@@ -124,6 +152,14 @@ spec:
           image: "nginx:1.27-alpine"
           ports:
             - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 1
+            failureThreshold: 1
 ---
 apiVersion: v1
 kind: Service
@@ -141,6 +177,18 @@ spec:
     - name: http
       port: 80
       targetPort: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: c1-missing-env-settings
+  namespace: default
+  labels:
+    azure-diagnostics-test: "true"
+    diagnostics-scenario-namespace: c1-crash-missing-env
+    scenario: missing-required-env
+data:
+  APP_MODE: "production"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -172,7 +220,14 @@ spec:
             - /bin/sh
             - "-c"
           args:
-            - 'test -n "$APP_MODE" || { echo APP_MODE is required; exit 1; }; sleep 3600'
+            - 'test -n "$APP_MODE" || { echo APP_MODE is required; exit 1; }; test -n "$DB_DSN" || { echo DB_DSN is required; exit 1; }; sleep 3600'
+          env:
+            - name: APP_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: c1-missing-env-settings
+                  key: APP_MODE
+                  optional: false
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -226,7 +281,7 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 80
+      targetPort: 8080
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -239,6 +294,7 @@ metadata:
     scenario: configmap-key-mismatch
 data:
   ORDERS_ENDPOINT: "http://orders.default.svc.cluster.local"
+  PAYMENTS_URL: "http://payments.default.svc.cluster.local"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -277,4 +333,10 @@ spec:
                 configMapKeyRef:
                   name: c1-orders-config
                   key: ORDER_ENDPOINT
+                  optional: false
+            - name: PAYMENT_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: c1-orders-config
+                  key: PAYMENT_ENDPOINT
                   optional: false

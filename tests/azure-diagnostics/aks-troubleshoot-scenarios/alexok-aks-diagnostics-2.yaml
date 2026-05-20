@@ -54,7 +54,7 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 80
+      targetPort: 8080
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -94,6 +94,14 @@ spec:
             limits:
               memory: 32Mi
               cpu: 250m
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - test -f /tmp/healthy
+            initialDelaySeconds: 30
+            periodSeconds: 10
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -123,6 +131,14 @@ spec:
           image: "nginx:1.27-alpine"
           ports:
             - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 1
+            failureThreshold: 1
 ---
 apiVersion: v1
 kind: Service
@@ -233,7 +249,7 @@ metadata:
 spec:
   type: LoadBalancer
   selector:
-    app: c2-lb-backend
+    app: c2-lb-backend-typo
   ports:
     - name: http
       port: 80
@@ -267,6 +283,8 @@ metadata:
     diagnostics-scenario-namespace: c2-pvc-pending
     scenario: missing-storage-class
 spec:
+  nodeSelector:
+    diagnostics.azure.com/storage-nodepool: missing-pool
   containers:
     - name: app
       image: "busybox:1.36"
@@ -306,6 +324,12 @@ spec:
         diagnostics-scenario-namespace: c2-dns-policy
         scenario: network-policy-blocks-dns
     spec:
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          - 203.0.113.53
+        searches:
+          - svc.cluster.local
       containers:
         - name: client
           image: "busybox:1.36"
@@ -346,7 +370,7 @@ metadata:
     diagnostics-scenario-namespace: c2-pdb-upgrade
     scenario: pdb-blocks-node-drain
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: c2-critical-api
@@ -363,6 +387,14 @@ spec:
           image: "nginx:1.27-alpine"
           ports:
             - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 1
+            failureThreshold: 1
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -374,7 +406,7 @@ metadata:
     diagnostics-scenario-namespace: c2-pdb-upgrade
     scenario: pdb-blocks-node-drain
 spec:
-  minAvailable: 1
+  minAvailable: 2
   selector:
     matchLabels:
       app: c2-critical-api
