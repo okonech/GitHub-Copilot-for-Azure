@@ -85,8 +85,13 @@ function csvCell(value) {
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
+function roundToOneDecimal(value) {
+  const rounded = Math.round(value * 10) / 10;
+  return Object.is(rounded, -0) ? 0 : Number(rounded.toFixed(1));
+}
+
 function scoreDelta(record, withKey, withoutKey) {
-  return Number(record[withKey] ?? 0) - Number(record[withoutKey] ?? 0);
+  return roundToOneDecimal(Number(record[withKey] ?? 0) - Number(record[withoutKey] ?? 0));
 }
 
 function toCsv(records) {

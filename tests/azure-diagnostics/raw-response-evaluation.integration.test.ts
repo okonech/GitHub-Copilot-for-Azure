@@ -18,15 +18,16 @@ import {
 import { getToolCalls, withTestResult } from "../utils/evaluate";
 
 const TEST_TIMEOUT_MS = 4 * 60 * 60 * 1000;
-const DEFAULT_ROW_LIMIT = 2;
+const DEFAULT_ROW_LIMIT = Number.POSITIVE_INFINITY;
 const DEFAULT_SCORE_SAMPLE_COUNT = 5;
+const DEFAULT_JUDGE_ATTEMPT_COUNT = 3;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const WITHOUT_SKILL_FILE = path.join(__dirname, "..", "reports", "azure-diagnostics-raw-call-data.jsonl");
+const WITHOUT_SKILL_FILE = path.join(__dirname, "azure-diagnostics-raw-call-data-without-skill.jsonl");
 const WITH_SKILL_FILE = path.join(__dirname, "azure-diagnostics-raw-call-data-with-skill.jsonl");
 const SCENARIO_DIR = path.join(__dirname, "aks-troubleshoot-scenarios");
-const REPORT_PATH = path.join("reports", "azure-diagnostics-raw-response-evaluation.jsonl");
+const REPORT_PATH = path.join("azure-diagnostics", "azure-diagnostics-raw-response-evaluation.jsonl");
 
 interface RawCaptureRecord {
   promptIndex: number;
@@ -76,6 +77,24 @@ function getRowLimit(): number {
 function getScoreSampleCount(): number {
   const parsed = Number.parseInt(process.env.RAW_RESPONSE_EVAL_SAMPLE_COUNT ?? "", 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SCORE_SAMPLE_COUNT;
+}
+
+function getJudgeAttemptCount(): number {
+  const parsed = Number.parseInt(process.env.RAW_RESPONSE_EVAL_JUDGE_ATTEMPTS ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_JUDGE_ATTEMPT_COUNT;
+}
+
+function getStartIndex(rowLimit: number): number {
+  const parsed = Number.parseInt(process.env.RAW_RESPONSE_EVAL_START_INDEX ?? "", 10);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+
+  if (parsed < 1 || parsed > rowLimit) {
+    throw new Error(`RAW_RESPONSE_EVAL_START_INDEX must be between 1 and ${rowLimit}, got ${parsed}`);
+  }
+
+  return parsed - 1;
 }
 
 function getTokenCount(record: RawCaptureRecord): number {
@@ -206,23 +225,30 @@ Authoritative ground truth:
 - The YAML from tests/azure-diagnostics/aks-troubleshoot-scenarios for that cluster is the source of truth for configured workloads, labels, selectors, probes, images, ports, ConfigMaps, Secrets, PVCs, NetworkPolicies, PDBs, HPAs, service accounts, and other scenario facts.
 - A run may cite runtime evidence from the cluster, including tool outputs in the captured conversation, but configuration claims must be consistent with the YAML. Penalize claims that contradict the YAML or invent resources, ports, keys, labels, images, probes, or relationships that are not supported by the prompt, YAML, or captured evidence.
 
+Presentation calibration:
+- Do not penalize clear structure. Headings, bullets, short tables, code blocks, commands, YAML snippets, and evidence/fix summaries are positive when they help the user understand the diagnosis.
+- Prefer responses that present evidence clearly before or alongside conclusions, especially responses that separate symptoms, evidence, root cause, and remediation.
+- Penalize unstructured or overly terse answers that may be technically correct but make the user infer the causal chain, miss useful evidence, or leave remediation ambiguous.
+- Penalize verbosity only when it is generic, distracting, unsupported, or makes the diagnosis harder to use. Do not treat well-organized tables or concise evidence summaries as verbosity.
+- If two responses are similarly correct, the clearer, more user-actionable, evidence-organized response should receive the higher score.
+
 Groundedness score, 1-10:
-- 10: All important factual claims are accurate against the authoritative YAML and prompt, and any extra runtime claims are clearly tied to captured or quoted evidence. No hallucinated details.
-- 8-9: Mostly accurate and evidence-based, with only small omissions or minor unsupported details that do not affect the diagnosis.
-- 6-7: Generally points at the right area but includes some unsupported or imprecise facts, weak evidence handling, or small contradictions.
+- 10: Exceptional. Every important factual claim is accurate against the authoritative YAML and prompt; runtime claims are clearly tied to captured or quoted evidence; layered or secondary scenario facts are not missed; evidence is organized clearly for the user; no hallucinated details. Reserve 10 for answers with essentially no factual, evidentiary, or clarity defects.
+- 8-9: Strong and mostly accurate, with clear evidence handling, but with small omissions, minor unsupported details, incomplete presentation of layered facts, or modest clarity issues that do not change the diagnosis.
+- 6-7: Generally points at the right area but includes some unsupported or imprecise facts, weak evidence handling, unclear presentation, or small contradictions.
 - 4-5: Mixed accuracy. Some correct observations, but meaningful hallucinations, missing evidence, or unsupported assertions make the response only partly trustworthy.
 - 2-3: Mostly ungrounded or contradicted by the YAML/prompt, even if it mentions a plausible Kubernetes concept.
 - 1: Fundamentally false, unrelated, or almost entirely hallucinated.
 
 Root cause analysis score, 1-10:
-- 10: Identifies the true underlying issue or issues in the scenario, explains the causal chain from configured problem to symptom, distinguishes symptoms from causes, and gives an appropriate fix.
-- 8-9: Finds the real root cause and gives useful remediation, but misses some nuance, supporting evidence, or secondary implications.
-- 6-7: Finds the broad problem area but diagnosis is incomplete, shallow, or partly symptom-level.
+- 10: Exceptional. Identifies every true underlying issue in the scenario, including layered or secondary blockers; explains the causal chain from configured problem to observed symptom; distinguishes symptoms, evidence, and causes; rules out plausible wrong paths when relevant; presents a clear user-actionable fix. Reserve 10 for complete, well-supported, well-communicated diagnoses.
+- 8-9: Finds the main real root cause and gives useful remediation, but misses some nuance, a secondary issue, a useful piece of evidence, a wrong-path distinction, or some clarity in the evidence-to-fix chain.
+- 6-7: Finds the broad problem area but diagnosis is incomplete, shallow, partly symptom-level, or not organized clearly enough for confident action.
 - 4-5: Partially solves the prompt but misses an important underlying issue, confuses cause and symptom, or gives a weak/incomplete remediation.
 - 2-3: Barely addresses the true issue; mostly generic troubleshooting or wrong cause with a small relevant fragment.
 - 1: Does not find the problem at all.
 
-Grade hard, strict, and fair. Apply exactly the same criteria to every run. Do not reward verbosity unless it improves correctness or root-cause depth.
+Grade hard, strict, and fair. Apply exactly the same criteria to every run. Use the full 1-10 scale: many good answers should land in 8-9 rather than 10 when they are correct but incomplete, weakly structured, or missing a secondary scenario detail. Reward clear, evidence-backed presentation because it improves user usefulness; do not reward generic verbosity.
 
 Return only this JSON shape with integer scores from 1 through 10 and no markdown:
 {
@@ -268,27 +294,47 @@ async function scoreRun(
 ): Promise<JudgeScores> {
   const groundednessScores: number[] = [];
   const rootCauseAnalysisScores: number[] = [];
+  const judgeAttemptCount = getJudgeAttemptCount();
 
   for (let sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
-    const judgeMetadata = await agent.run({
-      prompt: buildJudgePrompt(
-        prompt,
-        scenarioContext,
-        runLabel,
-        getFullRunConversation(record)
-      ),
-      nonInteractive: true,
-      includeSkills: [],
-      systemPrompt: {
-        mode: "replace",
-        content: "You are a strict evaluator. Do not call tools. Do not invoke skills. Return only valid JSON matching the requested schema."
+    let scores: JudgeScores | undefined;
+
+    for (let attemptIndex = 0; attemptIndex < judgeAttemptCount; attemptIndex++) {
+      try {
+        const judgeMetadata = await agent.run({
+          prompt: buildJudgePrompt(
+            prompt,
+            scenarioContext,
+            runLabel,
+            getFullRunConversation(record)
+          ),
+          nonInteractive: true,
+          includeSkills: [],
+          systemPrompt: {
+            mode: "replace",
+            content: "You are a strict evaluator. Do not call tools. Do not invoke skills. Return only valid JSON matching the requested schema."
+          }
+        });
+
+        const toolCalls = getToolCalls(judgeMetadata);
+        expect(toolCalls).toHaveLength(0);
+
+        scores = parseJudgeScores(getFinalAssistantMessage(judgeMetadata));
+        break;
+      } catch (error) {
+        if (attemptIndex === judgeAttemptCount - 1) {
+          throw error;
+        }
+
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(`${runLabel} judge sample ${sampleIndex + 1}/${sampleCount} attempt ${attemptIndex + 1}/${judgeAttemptCount} failed: ${message}`);
       }
-    });
+    }
 
-    const toolCalls = getToolCalls(judgeMetadata);
-    expect(toolCalls).toHaveLength(0);
+    if (!scores) {
+      throw new Error(`${runLabel} judge sample ${sampleIndex + 1}/${sampleCount} did not return scores`);
+    }
 
-    const scores = parseJudgeScores(getFinalAssistantMessage(judgeMetadata));
     groundednessScores.push(scores.groundednessScore);
     rootCauseAnalysisScores.push(scores.rootCauseAnalysisScore);
 
@@ -310,11 +356,14 @@ describeIntegration("azure-diagnostics_ - Raw Response Evaluation", () => {
       const withSkillRecords = readJsonlRecords(WITH_SKILL_FILE);
       const rowLimit = Math.min(getRowLimit(), withoutSkillRecords.length, withSkillRecords.length);
       const sampleCount = getScoreSampleCount();
+      const startIndex = getStartIndex(rowLimit);
 
       fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
-      fs.writeFileSync(REPORT_PATH, "", "utf-8");
+      if (startIndex === 0) {
+        fs.writeFileSync(REPORT_PATH, "", "utf-8");
+      }
 
-      for (let index = 0; index < rowLimit; index++) {
+      for (let index = startIndex; index < rowLimit; index++) {
         const withoutSkill = withoutSkillRecords[index];
         const withSkill = withSkillRecords[index];
 
@@ -353,6 +402,7 @@ describeIntegration("azure-diagnostics_ - Raw Response Evaluation", () => {
       }
 
       expect(rowLimit).toBeGreaterThan(0);
+  expect(rowLimit - startIndex).toBeGreaterThan(0);
       expect(sampleCount).toBeGreaterThan(0);
     });
   }, TEST_TIMEOUT_MS);
